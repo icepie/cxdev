@@ -13,7 +13,6 @@ import (
 )
 
 func main() {
-
 	cxuser, err := client.NewCXUser("B19071121", "", "1283")
 	if err != nil {
 		log.Println(err)
@@ -24,6 +23,13 @@ func main() {
 	log.Println(cxuser.Cooikes)
 	log.Println(cxuser.TUID)
 	log.Println(cxuser.IMToken)
+
+	courses, err := cxuser.GetCourses()
+	if err != nil {
+		log.Println(err)
+	}
+
+	log.Println(courses)
 
 	//创建一个拨号器，也可以用默认的 websocket.DefaultDialer
 	dialer := websocket.Dialer{}

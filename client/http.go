@@ -3,11 +3,14 @@ package client
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/asmcos/requests"
 )
 
@@ -107,7 +110,6 @@ func (u *CXUser) getToken() {
 
 	if rte.Result {
 		token = rte.Token
-		log.Println("test")
 	} else {
 		return
 	}
@@ -115,7 +117,7 @@ func (u *CXUser) getToken() {
 	u.Token = token
 }
 
-// 获取 Token
+// 获取 IM Token
 func (u *CXUser) initIM() {
 
 	// 获取token
@@ -131,13 +133,13 @@ func (u *CXUser) initIM() {
 	}
 
 	reg := regexp.MustCompile(`loginByToken\('(\d+?)', '([^']+?)'\);`)
-	if reg == nil {
-		log.Println("MustCompile err")
-		return
-	}
 
 	//提取关键信息
 	result := reg.FindAllStringSubmatch(resp.Text(), -1)
+
+	if len(result) == 0 {
+		return
+	}
 
 	tuid, err := strconv.Atoi(result[0][1])
 
@@ -147,4 +149,157 @@ func (u *CXUser) initIM() {
 
 	u.TUID = uint64(tuid)
 	u.IMToken = result[0][2]
+}
+
+func (u CXUser) GetCourses() (courses []Course, err error) {
+
+	req := requests.Requests()
+
+	for _, cooike := range u.Cooikes {
+		req.SetCookie(cooike)
+	}
+
+	p := requests.Params{
+		"rss":        "1",
+		"start":      "0",
+		"size":       "500",
+		"catalogId":  "0",
+		"searchname": "",
+	}
+
+	resp, err := req.Get("https://mooc2-ans.chaoxing.com/visit/courses/list", p)
+	if err != nil {
+		return
+	}
+
+	// resp, err := req.Get("http://mooc1-2.chaoxing.com/visit/interaction")
+	// if err != nil {
+	// 	return
+	// }
+
+	// Load the HTML document
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(resp.Text()))
+	if err != nil {
+		return
+	}
+
+	//log.Println(resp.Text())
+
+	// 找到课程
+	ul := doc.Find("ul#courseList.course-list").First()
+
+	// 遍历课程
+	ul.Find("li.course").Each(func(index int, li *goquery.Selection) {
+		courseCover := li.Find("div.course-cover").First()
+		courseInfo := li.Find("div.course-info").First()
+
+		var course Course
+
+		clazzId, e := courseCover.Find("input.clazzId").First().Attr("value")
+		if e {
+			classID, _ := strconv.Atoi(clazzId)
+			course.ClassID = uint64(classID)
+			//log.Println("clazzId: ", clazzId)
+		}
+
+		courseId, e := courseCover.Find("input.courseId").First().Attr("value")
+		if e {
+			courseID, _ := strconv.Atoi(courseId)
+			course.CourseID = uint64(courseID)
+			//log.Println("courseId: ", courseId)
+		}
+
+		role, e := courseCover.Find("input.role").First().Attr("value")
+		if e {
+			course.Role, _ = strconv.Atoi(role)
+			//log.Println("role: ", role)
+		}
+
+		imgurl, e := courseCover.Find("a>img").First().Attr("src")
+		if e {
+			course.ImgURL = imgurl
+		}
+
+		name := courseInfo.Find("a.color1>span.course-name").First()
+		course.Name = name.Text()
+
+		info := courseInfo.Find("p.color2").First()
+		course.Info = info.Text()
+		//log.Println("info: ", info.Text())
+
+		teacher := courseInfo.Find("p.color3").First()
+		course.Teacher = teacher.Text()
+		//log.Println("teacher: ", teacher.Text())
+
+		// 设置班级信息
+		classRte, err := u.getClass(courseId, clazzId)
+		if err == nil {
+			course.BBSID = classRte.Data.BBSID
+
+			chatID, _ := strconv.Atoi(classRte.Data.ChatID)
+			course.Class.ChatID = uint64(chatID)
+
+			course.Class.Name = classRte.Data.Name
+			course.Class.StudentCount = classRte.Data.StudentCount
+
+			CreatorUserID, _ := strconv.Atoi(classRte.Data.CreatorUserID)
+			course.Class.CreatorUserID = uint64(CreatorUserID)
+		}
+
+		courses = append(courses, course)
+		//  else {
+		// 	log.Println(err)
+		// }
+		// log.Println(courseCover.Html())
+		// log.Println(courseInfo.Html())
+	})
+
+	return
+	//doc.
+
+	// reg := regexp.MustCompile(`\?courseid=(\d+?)&clazzid=(\d+?)&cpi=\d+`)
+
+	// //提取关键信息
+	// result := reg.FindAllStringSubmatch(resp.Text(), -1)
+
+	// if len(result) == 0 {
+	// 	return
+	// }
+
+	// log.Println(result)
+
+}
+
+func (u CXUser) getClass(courseId string, classId string) (rte ClassRte, err error) {
+
+	// 获取token
+	req := requests.Requests()
+
+	for _, cooike := range u.Cooikes {
+		req.SetCookie(cooike)
+	}
+
+	p := requests.Params{
+		"fid":      fmt.Sprint(u.SchoolID),
+		"courseId": courseId,
+		"classId":  classId,
+	}
+
+	resp, err := req.Get("https://mobilelearn.chaoxing.com/v2/apis/class/getClassDetail", p)
+	if err != nil {
+		return
+	}
+
+	//log.Println(resp.Text())
+
+	err = json.Unmarshal([]byte(resp.Text()), &rte)
+	if err != nil {
+		return
+	}
+
+	if rte.Result == 0 {
+		return rte, errors.New(fmt.Sprint(rte.ErrorMsg))
+	}
+
+	return
 }
