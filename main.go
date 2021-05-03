@@ -1,20 +1,36 @@
 package main
 
 import (
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"log"
+	"strings"
 	"time"
+
+	"github.com/icepie/cxdev/client"
 
 	"github.com/gorilla/websocket" //这里使用的是 gorilla 的 websocket 库
 )
 
 func main() {
+
+	_ = client.NewXUser("B19071121", "", "")
+
 	//创建一个拨号器，也可以用默认的 websocket.DefaultDialer
 	dialer := websocket.Dialer{}
 	//向服务器发送连接请求，websocket 统一使用 ws://，默认端口和http一样都是80
-	connect, r, err := dialer.Dial("wss://im-api-vip6-v2.easemob.com/ws/032/xvrhfd2j/websocket", nil)
+	connect, r, _ := dialer.Dial("wss://im-api-vip6-v2.easemob.com/ws/032/xvrhfd2j/websocket", nil)
 
 	log.Println(r.Body)
+
+	s := "46447381"
+
+	data, err := hex.DecodeString(s)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("% x", data)
 
 	if nil != err {
 		log.Println(err)
@@ -42,11 +58,23 @@ func main() {
 			if string(messageData) == "o" {
 				//connect.WriteJSON()
 				log.Println(0)
-				err := connect.WriteMessage(websocket.TextMessage, []byte(`["CAASPAoOY3gtZGV2I2N4c3R1ZHkSCDc1MDUwMDQ4GgtlYXNlbW9iLmNvbSITd2ViaW1fMTYxOTk3NTc4OTIxMhqFASR0JFlXTXRQWE9WWEt0cUVldXNWYm11ZzRkQU9LS2xFNEQtNlJIa3NZZ0p4U3NiOGpMS2tLcHcyV29SNlkyY3M1b05Cc0w2QXdNQUFBRjVMaFdOeUFCUEdnRGVrdEdzc295TEFDODctNFZFakRSS1FaZ05tMXNrUDR6X2RJMVIwOTNiOXdAA0rAAQgQEgUzLjAuMCgAMABKDTE2MTk5NzU3ODkyMTJiBXdlYmltahN3ZWJpbV8xNjE5OTc1Nzg5MjEycoUBJHQkWVdNdFBYT1ZYS3RxRWV1c1ZibXVnNGRBT0tLbEU0RC02Ukhrc1lnSnhTc2I4akxLa0twdzJXb1I2WTJjczVvTkJzTDZBd01BQUFGNUxoV055QUJQR2dEZWt0R3Nzb3lMQUM4Ny00VkVqRFJLUVpnTm0xc2tQNHpfZEkxUjA5M2I5d1AAWAA="]`))
+				err := connect.WriteMessage(websocket.TextMessage, []byte(`["CAASPAoOY3gtZGV2I2N4c3R1ZHkSCDc1MDUwMDQ4GgtlYXNlbW9iLmNvbSITd2ViaW1fMTYxOTk4NDQzOTEzORqFASR0JFlXTXQ3Y0pQNkt0cUVldTNVNmZxWVB0VExhS2xFNEQtNlJIa3NZZ0p4U3NiOGpMS2tLcHcyV29SNlkyY3M1b05Cc0w2QXdNQUFBRjVMaG9ST2dCUEdnRDBaS2ZHdjV4Nm1zUTJXV0pfVkJiczVwRDNLVE8zZnV4NTU3d2lkTHpadlFAA0rAAQgQEgUzLjAuMCgAMABKDTE2MTk5ODQ0MzkxMzliBXdlYmltahN3ZWJpbV8xNjE5OTg0NDM5MTM5coUBJHQkWVdNdDdjSlA2S3RxRWV1M1U2ZnFZUHRUTGFLbEU0RC02Ukhrc1lnSnhTc2I4akxLa0twdzJXb1I2WTJjczVvTkJzTDZBd01BQUFGNUxob1JPZ0JQR2dEMFpLZkd2NXg2bXNRMldXSl9WQmJzNXBEM0tUTzNmdXg1NTd3aWRMelp2UVAAWAA="]`))
 				if nil != err {
 					log.Println(err)
 					break
 				}
+			}
+			if strings.HasPrefix(string(messageData), "a[\"") {
+				sEnc := (string(messageData))
+
+				sEnc = strings.TrimLeft(sEnc, "a[\"")
+
+				sEnc = strings.TrimRight(sEnc, "\"]")
+
+				sDec, _ := base64.StdEncoding.DecodeString(sEnc)
+				fmt.Println(string(sDec))
+				fmt.Println(sDec)
+
 			}
 		case websocket.BinaryMessage: //二进制数据
 			fmt.Println(messageData)
