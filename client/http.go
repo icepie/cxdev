@@ -14,7 +14,7 @@ import (
 	"github.com/asmcos/requests"
 )
 
-type CXUser struct {
+type cxUser struct {
 	Username  string
 	Password  string
 	SchoolID  uint64
@@ -34,10 +34,10 @@ type CXUser struct {
 	Cooikes   []*http.Cookie
 }
 
-func NewCXUser(Username string, Password string, SchoolID string) (CXUser, error) {
+func NewCXUser(Username string, Password string, SchoolID string) (cxUser, error) {
 
 	// 初始化
-	var u CXUser
+	var u cxUser
 	u.Username = Username
 	u.Password = Password
 
@@ -86,7 +86,7 @@ func NewCXUser(Username string, Password string, SchoolID string) (CXUser, error
 }
 
 // 获取 Token
-func (u *CXUser) getToken() {
+func (u *cxUser) getToken() {
 
 	var token string
 
@@ -118,7 +118,7 @@ func (u *CXUser) getToken() {
 }
 
 // 获取 IM Token
-func (u *CXUser) initIM() {
+func (u *cxUser) initIM() {
 
 	// 获取token
 	req := requests.Requests()
@@ -151,7 +151,7 @@ func (u *CXUser) initIM() {
 	u.IMToken = result[0][2]
 }
 
-func (u CXUser) GetCourses() (courses []Course, err error) {
+func (u cxUser) GetCourses() (courses []Course, err error) {
 
 	req := requests.Requests()
 
@@ -232,7 +232,7 @@ func (u CXUser) GetCourses() (courses []Course, err error) {
 		//log.Println("teacher: ", teacher.Text())
 
 		// 设置班级信息
-		classRte, err := u.getClass(courseId, clazzId)
+		classRte, err := u.getClassDetail(courseId, clazzId)
 		if err == nil {
 			course.BBSID = classRte.Data.BBSID
 
@@ -270,9 +270,8 @@ func (u CXUser) GetCourses() (courses []Course, err error) {
 
 }
 
-func (u CXUser) getClass(courseId string, classId string) (rte ClassRte, err error) {
+func (u cxUser) getClassDetail(courseId string, classId string) (rte ClassRte, err error) {
 
-	// 获取token
 	req := requests.Requests()
 
 	for _, cooike := range u.Cooikes {
@@ -302,4 +301,63 @@ func (u CXUser) getClass(courseId string, classId string) (rte ClassRte, err err
 	}
 
 	return
+}
+
+func (u cxUser) UploadImage(path string) (rte UploadImageRte, err error) {
+
+	if !PathExist(path) {
+		return rte, errors.New("the file is not available")
+	}
+
+	req := requests.Requests()
+
+	for _, cooike := range u.Cooikes {
+		req.SetCookie(cooike)
+	}
+
+	p := requests.Params{
+		"puid":   fmt.Sprint(u.UID),
+		"_token": u.Token,
+	}
+
+	f := requests.Files{
+		"file": path,
+	}
+
+	resp, err := req.Post("https://pan-yz.chaoxing.com/upload", p, f)
+	if err != nil {
+		return
+	}
+
+	err = json.Unmarshal([]byte(resp.Text()), &rte)
+	if err != nil {
+		return
+	}
+
+	if !rte.Result {
+		return rte, errors.New(rte.Msg)
+	}
+
+	return
+}
+
+func (u cxUser) GetActivelist(courseId uint64, classId uint64) {
+	req := requests.Requests()
+
+	for _, cooike := range u.Cooikes {
+		req.SetCookie(cooike)
+	}
+
+	p := requests.Params{
+		"fid":      fmt.Sprint(u.SchoolID),
+		"courseId": fmt.Sprint(courseId),
+		"classId":  fmt.Sprint(classId),
+	}
+
+	resp, err := req.Get("https://mobilelearn.chaoxing.com/v2/apis/active/student/activelist", p)
+	if err != nil {
+		return
+	}
+
+	log.Println(resp.Text())
 }

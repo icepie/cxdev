@@ -46,6 +46,42 @@ type ClassRte struct {
 	Result   int         `json:"result"`
 }
 
+type UploadImageRte struct {
+	Crc  string `json:"crc"`
+	Data struct {
+		Crc          string `json:"crc"`
+		Creator      int64  `json:"creator"`
+		DisableOpt   bool   `json:"disableOpt"`
+		Duration     int64  `json:"duration"`
+		ExtInfo      string `json:"extinfo"`
+		FilePath     string `json:"filepath"`
+		FileType     string `json:"filetype"`
+		IsFile       bool   `json:"isfile"`
+		ModifyDate   int64  `json:"modifyDate"`
+		Name         string `json:"name"`
+		ObjectID     string `json:"objectId"`
+		Pantype      string `json:"pantype"`
+		Preview      string `json:"preview"`
+		PreviewURL   string `json:"previewUrl"`
+		Puid         int64  `json:"puid"`
+		ResTypeValue int64  `json:"resTypeValue"`
+		ResID        int64  `json:"resid"`
+		ResIDStr     string `json:"residstr"`
+		ResType      string `json:"restype"`
+		Size         int64  `json:"size"`
+		Sort         int64  `json:"sort"`
+		Suffix       string `json:"suffix"`
+		ThumbNail    string `json:"thumbnail"`
+		TopSort      int64  `json:"topsort"`
+		UploadDate   int64  `json:"uploadDate"`
+	} `json:"data"`
+	Msg      string `json:"msg"`
+	ObjectID string `json:"objectId"`
+	PuID     int64  `json:"puid"`
+	ResID    int64  `json:"resid"`
+	Result   bool   `json:"result"`
+}
+
 // Class 班级模型
 
 type Class struct {

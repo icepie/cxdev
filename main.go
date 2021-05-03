@@ -31,10 +31,19 @@ func main() {
 
 	log.Println(courses)
 
+	// imgRte, err := cxuser.UploadImage("./test.png")
+	// if err != nil {
+	// 	log.Println(err)
+	// }
+
+	// log.Println(imgRte)
+
+	cxuser.GetActivelist(204942811, 10173395)
+
 	//创建一个拨号器，也可以用默认的 websocket.DefaultDialer
 	dialer := websocket.Dialer{}
 	//向服务器发送连接请求，websocket 统一使用 ws://，默认端口和http一样都是80
-	connect, r, _ := dialer.Dial("wss://im-api-vip6-v2.easemob.com/ws/032/xvrhfd2j/websocket", nil)
+	connect, r, err := dialer.Dial("wss://im-api-vip6-v2.easemob.com/ws/032/xvrhfd2j/websocket", nil)
 
 	log.Println(r.Status)
 
@@ -46,7 +55,7 @@ func main() {
 	// }
 	// fmt.Printf("% x", data)
 
-	if nil != err {
+	if err != nil {
 		log.Println(err)
 		return
 	}
