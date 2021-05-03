@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/base64"
-	"encoding/hex"
 	"fmt"
 	"log"
 	"strings"
@@ -10,27 +9,36 @@ import (
 
 	"github.com/icepie/cxdev/client"
 
-	"github.com/gorilla/websocket" //这里使用的是 gorilla 的 websocket 库
+	"github.com/gorilla/websocket"
 )
 
 func main() {
 
-	_ = client.NewXUser("B19071121", "", "")
+	cxuser, err := client.NewCXUser("B19071121", "", "1283")
+	if err != nil {
+		log.Println(err)
+	}
+
+	log.Println(cxuser.RealName)
+	log.Println(cxuser.Token)
+	log.Println(cxuser.Cooikes)
+	log.Println(cxuser.TUID)
+	log.Println(cxuser.IMToken)
 
 	//创建一个拨号器，也可以用默认的 websocket.DefaultDialer
 	dialer := websocket.Dialer{}
 	//向服务器发送连接请求，websocket 统一使用 ws://，默认端口和http一样都是80
 	connect, r, _ := dialer.Dial("wss://im-api-vip6-v2.easemob.com/ws/032/xvrhfd2j/websocket", nil)
 
-	log.Println(r.Body)
+	log.Println(r.Status)
 
-	s := "46447381"
+	// s := "46447381"
 
-	data, err := hex.DecodeString(s)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("% x", data)
+	// data, err := hex.DecodeString(s)
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// fmt.Printf("% x", data)
 
 	if nil != err {
 		log.Println(err)
@@ -87,17 +95,4 @@ func main() {
 	}
 
 	time.Sleep(100 * time.Second)
-}
-
-func tickWriter(connect *websocket.Conn) {
-	for {
-		//向客户端发送类型为文本的数据
-		err := connect.WriteMessage(websocket.TextMessage, []byte("from client to server"))
-		if nil != err {
-			log.Println(err)
-			break
-		}
-		//休息一秒
-		time.Sleep(time.Second)
-	}
 }
