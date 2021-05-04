@@ -12,7 +12,13 @@ import (
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/asmcos/requests"
+	"github.com/gorilla/websocket"
 )
+
+type connMsg struct {
+	Type int
+	Data []byte
+}
 
 type cxUser struct {
 	Username  string
@@ -31,7 +37,10 @@ type cxUser struct {
 	Token     string
 	TUID      uint64
 	IMToken   string
+	Running   bool
 	Cooikes   []*http.Cookie
+	conn      *websocket.Conn
+	MsgChan   chan connMsg
 }
 
 func NewCXUser(Username string, Password string, SchoolID string) (cxUser, error) {
@@ -51,7 +60,7 @@ func NewCXUser(Username string, Password string, SchoolID string) (cxUser, error
 		"verify":   "0",
 	}
 
-	resp, err := req.Get("https://passport2.chaoxing.com/api/login", p)
+	resp, err := req.Get(loginURL, p)
 	if err != nil {
 		return u, err
 	}
@@ -97,7 +106,7 @@ func (u *cxUser) getToken() {
 		req.SetCookie(cooike)
 	}
 
-	resp, err := req.Get("https://pan-yz.chaoxing.com/api/token/uservalid")
+	resp, err := req.Get(getPanTokenURL)
 	if err != nil {
 		return
 	}
@@ -127,7 +136,7 @@ func (u *cxUser) initIM() {
 		req.SetCookie(cooike)
 	}
 
-	resp, err := req.Get("https://im.chaoxing.com/webim/me")
+	resp, err := req.Get(getIMTokenURL)
 	if err != nil {
 		return
 	}
@@ -167,7 +176,7 @@ func (u cxUser) GetCourses() (courses []Course, err error) {
 		"searchname": "",
 	}
 
-	resp, err := req.Get("https://mooc2-ans.chaoxing.com/visit/courses/list", p)
+	resp, err := req.Get(getCoursesURL, p)
 	if err != nil {
 		return
 	}
@@ -284,7 +293,7 @@ func (u cxUser) getClassDetail(courseId string, classId string) (rte ClassRte, e
 		"classId":  classId,
 	}
 
-	resp, err := req.Get("https://mobilelearn.chaoxing.com/v2/apis/class/getClassDetail", p)
+	resp, err := req.Get(getClassDetailURL, p)
 	if err != nil {
 		return
 	}
@@ -324,7 +333,7 @@ func (u cxUser) UploadImage(path string) (rte UploadImageRte, err error) {
 		"file": path,
 	}
 
-	resp, err := req.Post("https://pan-yz.chaoxing.com/upload", p, f)
+	resp, err := req.Post(uploadPanURL, p, f)
 	if err != nil {
 		return
 	}
@@ -354,7 +363,7 @@ func (u cxUser) GetActivelist(courseId uint64, classId uint64) {
 		"classId":  fmt.Sprint(classId),
 	}
 
-	resp, err := req.Get("https://mobilelearn.chaoxing.com/v2/apis/active/student/activelist", p)
+	resp, err := req.Get(getActiveListURL, p)
 	if err != nil {
 		return
 	}

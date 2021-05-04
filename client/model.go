@@ -1,5 +1,16 @@
 package client
 
+const (
+	loginURL          = "https://passport2.chaoxing.com/api/login"
+	getPanTokenURL    = "https://pan-yz.chaoxing.com/api/token/uservalid"
+	getIMTokenURL     = "https://im.chaoxing.com/webim/me"
+	getCoursesURL     = "https://mooc2-ans.chaoxing.com/visit/courses/list"
+	getClassDetailURL = "https://mobilelearn.chaoxing.com/v2/apis/class/getClassDetail"
+	getActiveListURL  = "https://mobilelearn.chaoxing.com/v2/apis/active/student/activelist"
+	uploadPanURL      = "https://pan-yz.chaoxing.com/upload"
+	imURL             = "wss://im-api-vip6-v2.easemob.com/ws/032/xvrhfd2j/websocket"
+)
+
 // LoginRte 登陆响应
 type LoginRte struct {
 	CxID      uint64 `json:"cxid"`
