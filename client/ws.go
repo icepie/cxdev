@@ -1,6 +1,7 @@
 package client
 
 import (
+	"bytes"
 	"encoding/base64"
 	"fmt"
 	"log"
@@ -21,6 +22,44 @@ func (u *cxUser) imConn() {
 	log.Println("IM连接成功!")
 }
 
+func (u *cxUser) imLogin() {
+
+	timeUnix := time.Since(time.Unix(0, 0)).Milliseconds()
+
+	buf := bytes.Buffer{}
+	//data := []byte{0x08, 0x00, 0x12, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16}
+	buf.Write([]byte{0x08, 0x00, 0x12})
+	buf.WriteByte(byte(52 + len(fmt.Sprint(u.TUID))))
+	buf.Write([]byte{0x0a, 0x0e})
+	buf.Write([]byte("cx-dev#cxstudy"))
+	buf.Write([]byte{0x12})
+	buf.WriteByte(byte(len(fmt.Sprint(u.TUID))))
+	buf.Write([]byte(fmt.Sprint(u.TUID)))
+	buf.Write([]byte{0x1a, 0x0b})
+	buf.Write([]byte("easemob.com"))
+	buf.Write([]byte{0x22, 0x13})
+	buf.Write([]byte("webim_" + fmt.Sprint(timeUnix)))
+	buf.Write([]byte{0x1a, 0x85, 0x01})
+	buf.Write([]byte("$t$"))
+	buf.Write([]byte(u.IMToken))
+	buf.Write([]byte{0x40, 0x03, 0x4a, 0xc0, 0x01, 0x08, 0x10, 0x12, 0x05, 0x33, 0x2e, 0x30, 0x2e, 0x30, 0x28, 0x00, 0x30, 0x00, 0x4a, 0x0d})
+	buf.Write([]byte(fmt.Sprint(timeUnix)))
+	buf.Write([]byte{0x62, 0x05, 0x77, 0x65, 0x62, 0x69, 0x6d, 0x6a, 0x13, 0x77, 0x65, 0x62, 0x69, 0x6d, 0x5f})
+	buf.Write([]byte(fmt.Sprint(timeUnix)))
+	buf.Write([]byte{0x72, 0x85, 0x01, 0x24, 0x74, 0x24})
+	buf.Write([]byte(u.IMToken))
+	buf.Write([]byte{0x50, 0x00, 0x58, 0x00})
+
+	data := `["` + base64.StdEncoding.EncodeToString(buf.Bytes()) + `"]`
+
+	log.Println("CXIM: Message send: " + data)
+
+	err := u.conn.WriteMessage(websocket.TextMessage, []byte(data))
+	if nil != err {
+		log.Println(err)
+	}
+}
+
 func (u *cxUser) IMStart() {
 	u.imConn()
 	//离开作用域关闭连接，go 的常规操作
@@ -30,8 +69,8 @@ func (u *cxUser) IMStart() {
 		messageType, messageData, err := u.conn.ReadMessage()
 		if nil != err {
 			log.Println(err)
-			log.Println("IM已断开连接!")
-			log.Println("准备重试...")
+			log.Println("CXIM: IM已断开连接!")
+			log.Println("CXIM: 准备重试...")
 			time.Sleep(5 * time.Second)
 			u.imConn()
 			//continue
@@ -40,17 +79,11 @@ func (u *cxUser) IMStart() {
 
 		switch messageType {
 		case websocket.TextMessage: //文本数据
-			fmt.Println(string(messageData))
-			if string(messageData) == "o" {
-				//connect.WriteJSON()
-				log.Println(0)
-				err := u.conn.WriteMessage(websocket.TextMessage, []byte(`["CAASPAoOY3gtZGV2I2N4c3R1ZHkSCDc1MDUwMDQ4GgtlYXNlbW9iLmNvbSITd2ViaW1fMTYxOTk4NDQzOTEzORqFASR0JFlXTXQ3Y0pQNkt0cUVldTNVNmZxWVB0VExhS2xFNEQtNlJIa3NZZ0p4U3NiOGpMS2tLcHcyV29SNlkyY3M1b05Cc0w2QXdNQUFBRjVMaG9ST2dCUEdnRDBaS2ZHdjV4Nm1zUTJXV0pfVkJiczVwRDNLVE8zZnV4NTU3d2lkTHpadlFAA0rAAQgQEgUzLjAuMCgAMABKDTE2MTk5ODQ0MzkxMzliBXdlYmltahN3ZWJpbV8xNjE5OTg0NDM5MTM5coUBJHQkWVdNdDdjSlA2S3RxRWV1M1U2ZnFZUHRUTGFLbEU0RC02Ukhrc1lnSnhTc2I4akxLa0twdzJXb1I2WTJjczVvTkJzTDZBd01BQUFGNUxob1JPZ0JQR2dEMFpLZkd2NXg2bXNRMldXSl9WQmJzNXBEM0tUTzNmdXg1NTd3aWRMelp2UVAAWAA="]`))
-				if nil != err {
-					log.Println(err)
-					//continue
-				}
-			}
-			if strings.HasPrefix(string(messageData), "a[\"") {
+			log.Println("CXIM: Message received:", string(messageData))
+			if strings.HasPrefix(string(messageData), "o") {
+				log.Println("CXIM: 准备登陆")
+				u.imLogin()
+			} else if strings.HasPrefix(string(messageData), "a") {
 				sEnc := (string(messageData))
 
 				sEnc = strings.TrimLeft(sEnc, "a[\"")
@@ -60,13 +93,14 @@ func (u *cxUser) IMStart() {
 				sDec, _ := base64.StdEncoding.DecodeString(sEnc)
 				fmt.Println(string(sDec))
 				fmt.Println(sDec)
-
+			} else if strings.HasPrefix(string(messageData), "h") {
+				log.Println("CXIM: 心跳")
 			}
 		case websocket.BinaryMessage: //二进制数据
 			fmt.Println(messageData)
 		case websocket.CloseMessage: //关闭
-			log.Println("IM已断开连接!")
-			log.Println("准备重试...")
+			log.Println("CXIM: IM已断开连接!")
+			log.Println("CXIM: 准备重试...")
 			time.Sleep(5 * time.Second)
 			u.imConn()
 		case websocket.PingMessage: //Ping
