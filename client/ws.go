@@ -61,10 +61,7 @@ func (u *cxUser) imLogin() {
 
 	log.Println("CXIM: Message send: " + data)
 
-	err := u.conn.WriteMessage(websocket.TextMessage, []byte(data))
-	if nil != err {
-		log.Println(err)
-	}
+	u.sendPackage([]byte(data))
 }
 
 func (u *cxUser) IMStart() {
@@ -117,6 +114,8 @@ func (u *cxUser) IMStart() {
 					data := `["` + base64.StdEncoding.EncodeToString(ss.Bytes()) + `"]`
 					log.Println("CXIM: Message send: " + data)
 					u.sendPackage([]byte(data))
+				} else if bytes.HasPrefix(sDec, []byte{0x08, 0x00, 0x40, 0x00, 0x4a}) {
+					log.Println("CXIM: 成功获取消息详情!")
 				}
 
 			} else if strings.HasPrefix(string(messageData), "h") {
