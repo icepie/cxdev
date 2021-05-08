@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	cxuser, err := client.NewCXUser("B19070404", "", "1283")
+	cxuser, err := client.NewCXUser("B19071121", "", "1283")
 	if err != nil {
 		log.Println(err)
 	}

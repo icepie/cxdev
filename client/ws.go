@@ -88,32 +88,60 @@ func (u *cxUser) IMStart() {
 				u.imLogin()
 			} else if strings.HasPrefix(string(messageData), "a") {
 				sEnc := (string(messageData))
-
 				sEnc = strings.TrimLeft(sEnc, "a[\"")
 				sEnc = strings.TrimRight(sEnc, "\"]")
 
 				sDec, _ := base64.StdEncoding.DecodeString(sEnc)
 
-				//buf := bytes.Buffer{}
-				// 08 00 40 03 4a 1b 28 00 42 02 08 00
-				//LoginRte := []byte{0x08, 0x00, 0x40, 0x03, 0x4a}
-
 				fmt.Println(string(sDec))
 				// fmt.Println(sDec)
 
 				if bytes.HasPrefix(sDec, []byte{0x08, 0x00, 0x40, 0x03, 0x4a}) {
-					log.Println("CXIM: 登陆成功!")
+					//log.Println("CXIM: 登陆成功!")
+
+					// 解析客户端ID
+					var d bytes.Buffer
+					for i, v := range sDec {
+						if i >= 14 {
+							d.Write([]byte{v})
+						}
+					}
+
+					log.Println("CXIM: 登陆成功:", d.String())
+
 				} else if bytes.HasPrefix(sDec, []byte{0x08, 0x00, 0x40, 0x02, 0x4a}) {
-					log.Println("CXIM: 收到消息通知!")
+
+					len := int(sDec[9])
+					if err != nil {
+						log.Println(err)
+					}
+
+					if len > 0 {
+						// 解析ChatID
+						var d bytes.Buffer
+						for i, v := range sDec {
+							if i >= 10 && i <= 10+len {
+								d.Write([]byte{v})
+							}
+						}
+
+						log.Println("CXIM: 收到消息通知 -> ChatID:", d.String())
+					}
+
+					log.Println("CXIM: 正在获取消息详情...")
+
+					// 正在构造获取消息的数据包
 					s := sDec
 					s[3] = 0x00
 					s[6] = 0x1a
 					ss := bytes.NewBuffer(s)
 					ss.Write([]byte{0x58, 0x00})
-					log.Println("CXIM: 正在获取消息详情...")
 					data := `["` + base64.StdEncoding.EncodeToString(ss.Bytes()) + `"]`
+
+					// 发送数据包
 					log.Println("CXIM: Message send: " + data)
 					u.sendPackage([]byte(data))
+
 				} else if bytes.HasPrefix(sDec, []byte{0x08, 0x00, 0x40, 0x00, 0x4a}) {
 					log.Println("CXIM: 成功获取消息详情!")
 				}
