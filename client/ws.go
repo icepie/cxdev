@@ -83,7 +83,9 @@ func (u *cxUser) IMStart() {
 
 		switch messageType {
 		case websocket.TextMessage: //文本数据
-			log.Println("CXIM: Message received:", string(messageData))
+
+			//log.Println("CXIM: Message received:", string(messageData))
+
 			if strings.HasPrefix(string(messageData), "o") {
 				log.Println("CXIM: 准备登陆...")
 				u.imLogin()
@@ -94,7 +96,7 @@ func (u *cxUser) IMStart() {
 
 				sDec, _ := base64.StdEncoding.DecodeString(sEnc)
 
-				fmt.Println(string(sDec))
+				//log.Println(string(sDec))
 				// fmt.Println(sDec)
 
 				if bytes.HasPrefix(sDec, []byte{0x08, 0x00, 0x40, 0x03, 0x4a}) {
@@ -150,7 +152,27 @@ func (u *cxUser) IMStart() {
 					}
 
 				} else if bytes.HasPrefix(sDec, []byte{0x08, 0x00, 0x40, 0x00, 0x4a}) {
-					log.Println("CXIM: 成功获取消息详情!")
+
+					if strings.Contains(string(sDec), `*]`) {
+
+						tmp := fmt.Sprintf(`%d`, u.TUID)
+
+						start := bytes.LastIndex(sDec, []byte(tmp)) + len(tmp) + 6
+
+						end := bytes.LastIndex(sDec, []byte{42, 93}) - 1
+
+						buf := bytes.Buffer{}
+
+						log.Println("Start: ", start, "End: ", end)
+
+						for i, b := range sDec {
+							if i >= start && i <= end {
+								buf.Write([]byte{b})
+							}
+						}
+
+						log.Println("CXIM: 成功获取消息详情 -> Msg:", buf.String())
+					}
 				}
 
 			} else if strings.HasPrefix(string(messageData), "h") {
