@@ -23,6 +23,9 @@ func (u *cxUser) imConn() {
 }
 
 func (u *cxUser) sendPackage(data []byte) {
+
+	log.Println("CXIM: Message send: " + string(data))
+
 	err := u.conn.WriteMessage(websocket.TextMessage, data)
 	if nil != err {
 		log.Println(err)
@@ -58,8 +61,6 @@ func (u *cxUser) imLogin() {
 	buf.Write([]byte{0x50, 0x00, 0x58, 0x00})
 
 	data := `["` + base64.StdEncoding.EncodeToString(buf.Bytes()) + `"]`
-
-	log.Println("CXIM: Message send: " + data)
 
 	u.sendPackage([]byte(data))
 }
@@ -107,7 +108,9 @@ func (u *cxUser) IMStart() {
 						}
 					}
 
-					log.Println("CXIM: 登陆成功:", d.String())
+					clientID := strings.Trim(d.String(), `"`)
+
+					log.Println("CXIM: 登陆成功:", clientID)
 
 				} else if bytes.HasPrefix(sDec, []byte{0x08, 0x00, 0x40, 0x02, 0x4a}) {
 
@@ -125,22 +128,26 @@ func (u *cxUser) IMStart() {
 							}
 						}
 
-						log.Println("CXIM: 收到消息通知 -> ChatID:", d.String())
+						chatID := strings.Trim(d.String(), `"`)
+
+						log.Println("CXIM: 收到消息通知 -> ChatID:", chatID)
+
+						log.Println("CXIM: 正在获取消息详情...")
+
+						// 正在构造获取消息的数据包
+						s := sDec
+						s[3] = 0x00
+						s[6] = 0x1a
+						ss := bytes.NewBuffer(s)
+						ss.Write([]byte{0x58, 0x00})
+						data := `["` + base64.StdEncoding.EncodeToString(ss.Bytes()) + `"]`
+
+						// 发送数据包
+						u.sendPackage([]byte(data))
+
+						// 标为已读
+						u.MarkRead(chatID)
 					}
-
-					log.Println("CXIM: 正在获取消息详情...")
-
-					// 正在构造获取消息的数据包
-					s := sDec
-					s[3] = 0x00
-					s[6] = 0x1a
-					ss := bytes.NewBuffer(s)
-					ss.Write([]byte{0x58, 0x00})
-					data := `["` + base64.StdEncoding.EncodeToString(ss.Bytes()) + `"]`
-
-					// 发送数据包
-					log.Println("CXIM: Message send: " + data)
-					u.sendPackage([]byte(data))
 
 				} else if bytes.HasPrefix(sDec, []byte{0x08, 0x00, 0x40, 0x00, 0x4a}) {
 					log.Println("CXIM: 成功获取消息详情!")
@@ -166,4 +173,17 @@ func (u *cxUser) IMStart() {
 }
 
 func (u *cxUser) IMHandle() {
+}
+
+func (u *cxUser) MarkRead(chatID string) {
+
+	buf := bytes.Buffer{}
+
+	buf.Write([]byte{8, 0, 64, 0, 74, 22, 16, 220, 148, 128, 164, 216, 221, 151, 151, 12, 26, 10, 18, 8})
+	buf.Write([]byte(chatID))
+	buf.Write([]byte{88, 0})
+
+	data := `["` + base64.StdEncoding.EncodeToString(buf.Bytes()) + `"]`
+
+	u.sendPackage([]byte(data))
 }
